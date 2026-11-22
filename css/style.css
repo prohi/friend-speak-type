@@ -1,0 +1,186 @@
+@font-face { font-family: 'Lexend'; font-weight: 400; src: url('../fonts/lexend-latin-400.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Lexend'; font-weight: 400; src: url('../fonts/lexend-latin-ext-400.woff2') format('woff2'); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Lexend'; font-weight: 700; src: url('../fonts/lexend-latin-700.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Lexend'; font-weight: 700; src: url('../fonts/lexend-latin-ext-700.woff2') format('woff2'); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  --bg: #c9c7c5;
+  --bar: #24506b;
+  --bar-ink: #ffffff;
+  --paper: #ffffff;
+  --ink: #1c3b4f;
+  --key: #f6f6f6;
+  --key-ink: #111111;
+  --key-special: #d3d1cf;
+  --key-edge: #8c8a88;
+  --line: #24506b;
+  --hover: #ffd54a;
+  --hover-ink: #000000;
+  --on: #8fd18f;
+  --danger: #d32f2f;
+  --font: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body.contrast {
+  --bg: #000000;
+  --bar: #000000;
+  --bar-ink: #ffff00;
+  --paper: #000000;
+  --ink: #ffffff;
+  --key: #000000;
+  --key-ink: #ffff00;
+  --key-special: #000000;
+  --key-edge: #ffff00;
+  --line: #ffff00;
+  --hover: #ffff00;
+  --on: #00e5ff;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: var(--bg);
+  font-family: var(--font); color: var(--ink);
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  touch-action: none; overscroll-behavior: none;
+}
+body.dyslexic { --font: 'Lexend', system-ui, sans-serif; letter-spacing: 0.04em; }
+
+#app { display: flex; flex-direction: column; height: 100dvh; }
+
+.t {
+  position: relative; border: 0; padding: 0; margin: 0; font: inherit; color: inherit;
+  background: none; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.ico { width: 70%; height: 70%; }
+
+/* Felső sáv: IGEN / mentett üzenetek / NEM */
+#topbar { display: flex; height: 9.5vh; background: var(--bar); color: var(--bar-ink); border-bottom: 0.4vh solid var(--line); }
+.bar-btn { flex: 1; font-size: 5.2vh; font-weight: 600; letter-spacing: 0.05em; color: var(--bar-ink); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.bar-btn.center { flex: 0 0 24%; background: var(--paper); color: var(--ink); margin: 0.7vh 0 0; border-radius: 1vh 1vh 0 0; }
+.bar-btn.center .ico { width: 5.5vh; height: 5.5vh; }
+
+/* Beviteli sor */
+#inputrow { display: flex; height: 19vh; background: var(--paper); border-bottom: 0.3vh solid var(--line); }
+.io-btn { flex: 0 0 12vw; display: flex; align-items: center; justify-content: center; color: var(--ink); overflow: hidden; }
+.io-btn .ico { width: 11vh; height: 11vh; }
+#speak-btn.speaking { background: var(--on); }
+body.left-hand #inputrow { flex-direction: row-reverse; }
+#editor-wrap { flex: 1; position: relative; border-left: 0.3vh solid var(--line); border-right: 0.3vh solid var(--line); overflow: hidden; }
+#editor, #editor-ta {
+  position: absolute; inset: 0; padding: 1.2vh 1.6vh; margin: 0; border: 0; width: 100%; height: 100%;
+  font: inherit; font-size: 6.2vh; line-height: 1.22; color: var(--ink); background: transparent;
+  white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden; resize: none; outline: none;
+}
+#editor-ta { user-select: text; -webkit-user-select: text; touch-action: auto; }
+#placeholder { position: absolute; left: 1.6vh; top: 1.2vh; font-size: 6.2vh; line-height: 1.22; opacity: 0.35; pointer-events: none; }
+#editor:not(.empty) ~ #placeholder, #editor-wrap.has-text #placeholder { display: none; }
+.caret { display: inline-block; width: 0.5vh; height: 1em; margin: 0 -0.25vh; vertical-align: text-bottom; background: var(--danger); animation: blink 1s steps(2, start) infinite; }
+body.contrast .caret { background: #ff5252; }
+@keyframes blink { 50% { opacity: 0; } }
+body.upper #editor, body.upper #editor-ta, body.upper .card, body.upper .sug, body.upper .key .cap { text-transform: uppercase; }
+
+/* Szóajánló */
+#suggest { display: flex; height: 10vh; background: var(--bg); padding: 0.8vh 0.6vw 0; gap: 0.6vw; }
+.sug { flex: 1; min-width: 0; background: var(--key); color: var(--key-ink); border-radius: 1.2vh; font-size: 4.6vh; font-weight: 500; box-shadow: 0 0.35vh 0 var(--key-edge); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 1vw; }
+body.contrast .sug { border: 0.4vh solid var(--key-edge); box-shadow: none; }
+.sug.disabled { opacity: 0.35; pointer-events: none; }
+
+/* Billentyűzet */
+#keyboard { flex: 1; display: flex; flex-direction: column; padding: 0.6vh 0.4vw 0.8vh; background: var(--bg); min-height: 0; }
+.krow { flex: 1; display: flex; min-height: 0; }
+.kspacer { min-width: 0; }
+.key { padding: 0.45vh 0.28vw; display: flex; min-width: 0; }
+.key .cap {
+  flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+  background: var(--key); color: var(--key-ink); border-radius: 1.3vh; font-size: 5.4vh; font-weight: 500;
+  box-shadow: 0 0.35vh 0 var(--key-edge);
+}
+.key.special .cap { background: var(--key-special); font-size: 4.4vh; }
+.key .cap small { position: absolute; top: 0.6vh; left: 0; right: 0; text-align: center; font-size: 2.6vh; opacity: 0.7; }
+.key.k-space .cap { font-size: 3vh; }
+.key.k-shift.on .cap { background: var(--hover); color: var(--hover-ink); }
+body.contrast .key .cap { border: 0.4vh solid var(--key-edge); box-shadow: none; }
+
+/* Állapotok: kijelölt (hover), aktivált (ok), figyelmen kívül hagyott (ignored), hosszú lenyomás folyamata */
+.t.hover:not(.key) { background: var(--hover) !important; color: var(--hover-ink) !important; }
+.key.hover .cap { background: var(--hover) !important; color: var(--hover-ink) !important; transform: scale(1.05); }
+.t.ok:not(.key) { box-shadow: inset 0 0 0 1vh var(--on); }
+.key.ok .cap { box-shadow: 0 0 0 0.8vh var(--on); }
+.t.ignored { opacity: 0.45; }
+.t.dwelling:not(.key)::after, .key.dwelling .cap::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(0, 0, 0, 0.3); pointer-events: none;
+  animation: dwell var(--dwell, 800ms) linear forwards;
+}
+@keyframes dwell { to { height: 100%; } }
+
+/* Érintésjelző */
+#touch-marker {
+  position: fixed; left: 0; top: 0; width: 8vh; height: 8vh; margin: -4vh 0 0 -4vh; border-radius: 50%;
+  background: rgba(220, 0, 0, 0.45); border: 0.7vh solid rgba(220, 0, 0, 0.95); pointer-events: none; opacity: 0; z-index: 100;
+}
+#touch-marker.visible { opacity: 1; }
+
+#status { position: fixed; top: 0.5vh; right: 1vw; font-size: 1.9vh; color: var(--bar-ink); opacity: 0.85; pointer-events: none; z-index: 5; }
+#toast { position: fixed; left: 50%; bottom: 14vh; transform: translateX(-50%); max-width: 80vw; padding: 1.4vh 3vh; border-radius: 3vh; background: rgba(0, 0, 0, 0.85); color: #fff; font-size: 3.6vh; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 60; text-align: center; }
+#toast.show { opacity: 1; }
+
+/* Átfedő képernyők */
+.overlay { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); z-index: 20; }
+.ov-head { display: flex; align-items: stretch; height: 11vh; background: var(--bar); color: var(--bar-ink); border-bottom: 0.4vh solid var(--line); gap: 1vw; padding: 0.8vh 1vw; }
+.ov-btn { flex: 0 0 18vw; font-size: 4vh; font-weight: 600; background: rgba(255, 255, 255, 0.16); color: var(--bar-ink); border-radius: 1.2vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+body.contrast .ov-btn { border: 0.4vh solid var(--line); background: #000; }
+.ov-btn.gear { flex: 0 0 11vw; }
+.ov-btn.gear .ico { width: 7vh; height: 7vh; }
+.tabs { flex: 1; display: flex; gap: 1vw; }
+.tab { flex: 1; font-size: 3.8vh; font-weight: 600; color: var(--bar-ink); background: transparent; border-radius: 1.2vh; border: 0.4vh solid rgba(255, 255, 255, 0.35); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.tab.on { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+body.contrast .tab { border-color: var(--line); }
+body.contrast .tab.on { background: #ffff00; color: #000; }
+
+.cards { flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); gap: 1.4vh 1vw; padding: 1.4vh 1vw; min-height: 0; }
+.card { background: var(--key); color: var(--key-ink); border-radius: 1.4vh; box-shadow: 0 0.35vh 0 var(--key-edge); font-size: 4.2vh; text-align: left; padding: 0 2vw; display: flex; align-items: center; overflow: hidden; line-height: 1.15; }
+.card > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .count { position: absolute; right: 1vw; top: 0.6vh; font-size: 2.4vh; opacity: 0.6; }
+.card.del { box-shadow: inset 0 0 0 0.8vh var(--danger); }
+body.contrast .card { border: 0.4vh solid var(--key-edge); box-shadow: none; }
+.cards .empty-note { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; font-size: 4vh; opacity: 0.6; text-align: center; padding: 4vw; }
+.ov-foot { display: flex; gap: 1vw; height: 12vh; padding: 0.8vh 1vw 1.2vh; background: var(--bg); border-top: 0.3vh solid var(--line); }
+.foot-btn { flex: 1; font-size: 3.5vh; font-weight: 600; background: var(--key); color: var(--key-ink); border-radius: 1.2vh; box-shadow: 0 0.35vh 0 var(--key-edge); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 0.5vw; }
+.foot-btn.on { background: var(--bar); color: var(--bar-ink); }
+body.contrast .foot-btn { border: 0.4vh solid var(--key-edge); box-shadow: none; }
+body.contrast .foot-btn.on { background: #ffff00; color: #000; }
+.foot-sep { flex: 0 0 1vw; }
+.foot-info { flex: 0 0 9vw; display: flex; align-items: center; justify-content: center; font-size: 3.4vh; }
+
+/* Beállítások */
+.settings-body { flex: 1; display: grid; grid-auto-rows: 1fr; gap: 1.2vh; padding: 1.4vh 1.2vw; min-height: 0; }
+.srow { display: flex; align-items: stretch; gap: 1vw; min-height: 0; }
+.slabel { flex: 1; display: flex; align-items: center; font-size: 3.8vh; padding: 0 1vw; line-height: 1.1; }
+.slabel small { display: block; font-size: 2.4vh; opacity: 0.65; }
+.sctl { flex: 0 0 52%; display: flex; gap: 0.8vw; min-height: 0; }
+.sbtn { flex: 1; font-size: 4vh; font-weight: 600; background: var(--key); color: var(--key-ink); border-radius: 1.2vh; box-shadow: 0 0.35vh 0 var(--key-edge); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 0.6vw; text-align: center; line-height: 1.1; }
+.sbtn.step { flex: 0 0 20%; font-size: 5vh; }
+.sbtn.val { flex: 1; background: transparent; box-shadow: none; pointer-events: none; font-size: 4.2vh; }
+.sbtn.state-on { background: var(--bar); color: var(--bar-ink); }
+.sbtn.danger { background: var(--danger); color: #fff; }
+.srow.wide .sctl { flex: 1; }
+.srow.note { align-items: center; font-size: 2.7vh; opacity: 0.8; line-height: 1.3; }
+body.contrast .sbtn { border: 0.4vh solid var(--key-edge); box-shadow: none; }
+body.contrast .sbtn.state-on { background: #ffff00; color: #000; }
+
+/* Kód megadása */
+#overlay-settings { z-index: 25; }
+#overlay-pin { z-index: 30; }
+body.sys-kb #inputrow { height: 34vh; }
+.pin-title { flex: 1; display: flex; align-items: center; font-size: 4.2vh; font-weight: 600; }
+.pin-dots { height: 12vh; display: flex; align-items: center; justify-content: center; gap: 3vw; }
+.pin-dots span { width: 5vh; height: 5vh; border-radius: 50%; border: 0.6vh solid var(--ink); }
+.pin-dots span.on { background: var(--ink); }
+.pin-dots.shake { animation: shake 0.3s; }
+@keyframes shake { 25% { transform: translateX(-2vw); } 75% { transform: translateX(2vw); } }
+.pin-pad { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); gap: 1.2vh 1vw; padding: 1vh 22vw 2vh; min-height: 0; }
+.pin-pad .t { background: var(--key); color: var(--key-ink); border-radius: 1.4vh; font-size: 6vh; font-weight: 600; box-shadow: 0 0.35vh 0 var(--key-edge); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+body.contrast .pin-pad .t { border: 0.4vh solid var(--key-edge); box-shadow: none; }
