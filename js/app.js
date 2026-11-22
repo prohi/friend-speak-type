@@ -210,7 +210,37 @@ function toast(msg) {
 
 /* ---------- Átfedő képernyők ---------- */
 
-const overlays = { messages: $('#overlay-messages'), settings: $('#overlay-settings'), pin: $('#overlay-pin') };
+const overlays = { messages: $('#overlay-messages'), settings: $('#overlay-settings'), pin: $('#overlay-pin'), install: $('#overlay-install') };
+
+/* ---------- Telepítés felajánlása ---------- */
+
+let installEvent = null;
+
+function setupInstall() {
+  const standalone = ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installEvent = e;
+    if (!standalone && !sessionStorage.getItem('fst.installDismissed')) overlays.install.hidden = false;
+  });
+  window.addEventListener('appinstalled', () => {
+    installEvent = null;
+    overlays.install.hidden = true;
+    toast('Telepítve! Mostantól a kezdőképernyőről indítható.');
+  });
+  // Ez a gomb szándékosan natív: a telepítési ablak csak valódi érintésre nyílik meg.
+  $('#install-go').addEventListener('click', async () => {
+    if (!installEvent) return;
+    installEvent.prompt();
+    const { outcome } = await installEvent.userChoice;
+    if (outcome === 'accepted') overlays.install.hidden = true;
+    installEvent = null;
+  });
+  $('#install-later').addEventListener('click', () => {
+    sessionStorage.setItem('fst.installDismissed', '1');
+    overlays.install.hidden = true;
+  });
+}
 
 function closeTopOverlay() {
   for (const name of ['pin', 'settings', 'messages']) {
@@ -706,6 +736,7 @@ async function main() {
   });
 
   applySettings();
+  setupInstall();
   store.requestPersistence();
 
   predictor.load('data/words-hu.txt', seedPhrases).then(refreshSuggestions).catch((e) => console.error('Szólista hiba', e));

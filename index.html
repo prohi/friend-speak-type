@@ -72,6 +72,19 @@
     <div id="pin-pad" class="pin-pad"></div>
   </div>
 
+  <!-- Telepítés felajánlása (csak böngészőből indítva, ha a böngésző támogatja) -->
+  <div id="overlay-install" class="overlay" hidden>
+    <div class="ov-head">
+      <button class="ov-btn" id="install-later" type="button" data-native>✕ Később</button>
+      <div class="pin-title">Telepítés a készülékre</div>
+    </div>
+    <div class="install-body">
+      <p>Telepítsd az alkalmazást: külön ikonról indul, teljes képernyőn fut, és internet nélkül is működik.</p>
+      <button id="install-go" type="button" data-native>📲 TELEPÍTÉS</button>
+      <p class="small">Ezt a lépést a segítő is elvégezheti.</p>
+    </div>
+  </div>
+
   <div id="toast" role="status"></div>
   <div id="touch-marker"></div>
   <input type="file" id="import-file" accept="application/json,.json" hidden>
