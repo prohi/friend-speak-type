@@ -229,7 +229,7 @@ Az összes adat (felhasználók, beállítások, mentett üzenetek, tanult szava
 
 **Még hátra van:**
 1. **Kipróbálás a tényleges tableten** (hang sebessége, gombméretek, a felengedéskor aktiváló mód a kacskán tartott kézzel). Ettől függően finomhangolás.
-2. GitHub-tárhely és GitHub Pages, első telepítés a tabletre (HTTPS kell hozzá).
+2. ~~GitHub-tárhely és GitHub Pages~~ **kész**: <https://github.com/prohi/friend-speak-type>, élő változat: <https://prohi.github.io/friend-speak-type/>. Hátra van az első telepítés a tabletre.
 3. Vészhelyzet-gomb, kategóriák a mentett üzenetekben, szó- és szópár-statisztika szerkesztése (2. verzió).
 4. APK (Capacitor) és tükrözés (Codeberg, archive.org), telepítési útmutató képekkel és QR-kóddal.
 5. Az adatméret csökkentése (kisebb espeak-adatfájl), ha szükséges.

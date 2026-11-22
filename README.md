@@ -2,6 +2,14 @@
 
 Beszédpótló (AAC) webalkalmazás Androidra: a beírt szöveget hangosan kimondja. Internet nélkül is működik, telepíthető (PWA). A terv a [TERV.md](TERV.md) fájlban van.
 
+**Élő változat:** <https://prohi.github.io/friend-speak-type/>
+
+## Telepítés a tabletre
+
+1. Tablet Chrome böngészőjében nyisd meg az élő címet, és várd meg, amíg eltűnik a „Hang betöltése…” felirat (az első alkalommal kb. 90 MB töltődik le, ezért Wi-Fi ajánlott).
+2. Chrome menü (⋮) → **Alkalmazás telepítése** (vagy „Hozzáadás a kezdőképernyőhöz”).
+3. Ezután a kezdőképernyőn lévő ikonról indul, és internet nélkül is működik.
+
 ## Kipróbálás a számítógépen
 
 Kell hozzá Python (vagy bármilyen statikus webszerver). A projekt mappájában:
