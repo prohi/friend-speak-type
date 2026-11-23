@@ -1,7 +1,7 @@
 /* Offline működés: minden fájlt a készülék gyorsítótárából szolgál ki.
  * A kód (SMALL) verziózott gyorsítótárban van, a nagy, ritkán változó fájlok (BIG) külön, állandó gyorsítótárban,
  * így egy kódfrissítés nem tölti le újra a ~90 MB-nyi hangmodellt. A CACHE nevét minden kiadásnál növelni kell. */
-const CACHE = 'fst-v6';
+const CACHE = 'fst-v7';
 const ASSETS = 'fst-assets-1';
 
 const SMALL = [
@@ -47,7 +47,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith('/reset.html')) return; // a visszaállító oldal mindig a hálózatról jön, sosem kerül gyorsítótárba
   event.respondWith((async () => {
     const hit = await caches.match(req, { ignoreSearch: true });
     if (hit) return hit;

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Friend Speak Type – frissítés</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #24506b; color: #fff; display: flex; min-height: 100vh; align-items: center; justify-content: center; text-align: center; }
+    main { max-width: 40em; padding: 2em; }
+    h1 { font-size: 2em; margin: 0 0 0.6em; }
+    p { font-size: 1.3em; line-height: 1.4; }
+    #log { font-size: 1em; opacity: 0.85; text-align: left; background: rgba(0,0,0,0.25); padding: 1em; border-radius: 0.5em; white-space: pre-wrap; }
+    a.btn { display: inline-block; margin-top: 1em; padding: 0.8em 1.6em; font-size: 1.6em; font-weight: 700; color: #24506b; background: #fff; border-radius: 0.4em; text-decoration: none; }
+    a.btn[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Frissítés</h1>
+    <p id="msg">A régi offline adatok törlése folyamatban… A mentett üzenetek és a beállítások megmaradnak.</p>
+    <div id="log"></div>
+    <a class="btn" id="go" href="./" hidden>Alkalmazás indítása</a>
+  </main>
+  <script>
+    // Csak a Service Workert és az offline gyorsítótárat töröljük; a localStorage (üzenetek, beállítások) érintetlen marad.
+    const log = (t) => { document.getElementById('log').textContent += t + '\n'; };
+    (async () => {
+      try {
+        const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+        for (const r of regs) await r.unregister();
+        // Amíg ezt az oldalt a régi háttérfolyamat kezeli, az a lekérésekkel újra feltöltené a régi gyorsítótárat.
+        // Ezért leállítás után egyszer újratöltjük az oldalt – onnantól már nem kezeli semmi.
+        const tries = Number(new URLSearchParams(location.search).get('step') || 0);
+        if (navigator.serviceWorker && navigator.serviceWorker.controller && tries < 3) {
+          log('Régi háttérfolyamat leállítva, újratöltés…');
+          setTimeout(() => location.replace('reset.html?step=' + (tries + 1) + '&t=' + Date.now()), 400);
+          return;
+        }
+        log('Régi háttérfolyamat törölve' + (regs.length ? ': ' + regs.length + ' db' : ''));
+        const keys = await caches.keys();
+        for (const k of keys) await caches.delete(k);
+        log('Régi gyorsítótár törölve: ' + (keys.join(', ') || 'nem volt'));
+        // A böngésző saját (HTTP) gyorsítótárában is lehetnek régi fájlok: mindet frissen lekérjük, hogy ne keveredjenek a verziók.
+        const files = ['./', 'index.html', 'manifest.webmanifest', 'css/style.css',
+          'js/app.js', 'js/store.js', 'js/tts.js', 'js/tts-worker.js', 'js/predict.js', 'js/touch.js', 'js/keyboard.js',
+          'data/words-hu.txt', 'data/phrases-hu.json', 'sw.js'];
+        const results = await Promise.allSettled(files.map((u) => fetch(u, { cache: 'reload' })));
+        log('Friss fájlok letöltve: ' + results.filter((r) => r.status === 'fulfilled' && r.value.ok).length + '/' + files.length);
+        const res = await fetch('js/app.js', { cache: 'reload' });
+        const v = ((await res.text()).match(/const VERSION = '([^']+)'/) || [])[1] || '?';
+        log('Az elérhető legújabb verzió: ' + v);
+        document.getElementById('msg').textContent = 'Kész. Indítsd el az alkalmazást – az első indítás után kb. 90 MB töltődik le újra (Wi-Fi ajánlott).';
+      } catch (e) {
+        log('Hiba: ' + e);
+        document.getElementById('msg').textContent = 'Nem sikerült mindent törölni. Próbáld újra, vagy töröld a webhely adatait a Chrome beállításaiban.';
+      }
+      const go = document.getElementById('go');
+      go.href = './?frissitve=' + Date.now();
+      go.hidden = false;
+    })();
+  </script>
+</body>
+</html>

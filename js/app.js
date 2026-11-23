@@ -4,7 +4,7 @@ import { Predictor } from './predict.js';
 import { TouchController } from './touch.js';
 import { buildKeyboard, labelKeys, keyChar } from './keyboard.js';
 
-const VERSION = '0.4';
+const VERSION = '0.5';
 const MODEL_URL = 'voices/hu_HU-anna-medium.onnx';
 const CONFIG_URL = 'voices/hu_HU-anna-medium.onnx.json';
 const CARDS_PER_PAGE = 8;
@@ -473,6 +473,7 @@ function openSettings() {
     setTab.current = setTab.current || 'voice';
     overlays.settings.hidden = false;
     renderSettings();
+    checkOffline(); // friss állapot a verziósorhoz
   };
   if (store.settings.lockEnabled && store.settings.pin) {
     askPin('Add meg a kódot', (v) => (v === store.settings.pin ? (show(), true) : false));
@@ -790,7 +791,7 @@ async function main() {
   ta.addEventListener('input', syncFromTextarea);
   ta.addEventListener('keyup', syncFromTextarea);
 
-  $('#paste-box').addEventListener('input', (e) => {
+  $('#paste-box')?.addEventListener('input', (e) => {
     const text = e.target.value;
     if (!text.trim()) return;
     insert(text.replace(/\r\n?/g, '\n'));
@@ -881,4 +882,18 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') keepAwake();
 });
 
-main();
+/**
+ * Ha az index.html és az app.js különböző verzióból származik (pl. a böngésző saját gyorsítótára miatt),
+ * egyszer frissen újratölti a fájlokat. Kiadáskor az index.html app-version értékét is a VERSION-re kell állítani.
+ */
+async function versionsMismatch() {
+  const htmlVersion = document.querySelector('meta[name="app-version"]')?.content;
+  if (htmlVersion === VERSION) return false;
+  if (sessionStorage.getItem('fst.versionFix') === VERSION) return false; // nem ismételjük végtelenül
+  sessionStorage.setItem('fst.versionFix', VERSION);
+  await Promise.allSettled(['./', 'index.html', 'css/style.css'].map((u) => fetch(u, { cache: 'reload' })));
+  location.reload();
+  return true;
+}
+
+if (!(await versionsMismatch())) main();

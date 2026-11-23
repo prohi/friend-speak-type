@@ -10,6 +10,18 @@ Beszédpótló (AAC) webalkalmazás Androidra: a beírt szöveget hangosan kimon
 2. Chrome menü (⋮) → **Alkalmazás telepítése** (vagy „Hozzáadás a kezdőképernyőhöz”).
 3. Ezután a kezdőképernyőn lévő ikonról indul, és internet nélkül is működik.
 
+## Ha a tableten régi verzió fut
+
+A verzió a beállításokban látszik (▼ → ⚙ → EGYÉB fül, legalul). Ha nem a legújabb, a Chrome-ban nyisd meg ezt a címet:
+
+<https://prohi.github.io/friend-speak-type/reset.html>
+
+Ez törli a régi offline fájlokat (a mentett üzenetek és a beállítások megmaradnak), majd az „Alkalmazás indítása” gombbal elindul az új verzió. Utána zárd be, és indítsd el a kezdőképernyő ikonjáról.
+
+## Kiadás (fejlesztőknek)
+
+Minden kiadásnál három helyen kell növelni a verziót: `js/app.js` (`VERSION`), `index.html` (`app-version` meta), `sw.js` (`CACHE`).
+
 ## Kipróbálás a számítógépen
 
 Kell hozzá Python (vagy bármilyen statikus webszerver). A projekt mappájában:
