@@ -1,5 +1,5 @@
 /* Offline működés: minden fájlt a készülék gyorsítótárából szolgál ki. */
-const CACHE = 'fst-v4';
+const CACHE = 'fst-v5';
 
 const SMALL = [
   './', 'index.html', 'manifest.webmanifest',

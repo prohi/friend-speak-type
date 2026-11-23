@@ -4,7 +4,7 @@ import { Predictor } from './predict.js';
 import { TouchController } from './touch.js';
 import { buildKeyboard, labelKeys, keyChar } from './keyboard.js';
 
-const VERSION = '0.1';
+const VERSION = '0.3';
 const MODEL_URL = 'voices/hu_HU-anna-medium.onnx';
 const CONFIG_URL = 'voices/hu_HU-anna-medium.onnx.json';
 const CARDS_PER_PAGE = 8;
@@ -26,6 +26,7 @@ let suggestions = [];
 let seedPhrases = [];
 let piperStarted = false;
 let offlineReady = false;
+let cacheName = '';
 let touchCtl = null;
 
 /* ---------- Beállítások alkalmazása ---------- */
@@ -135,24 +136,37 @@ async function pasteFromClipboard() {
     const text = raw.replace(/\r\n?/g, '\n');
     if (!text.trim()) return toast('A vágólap üres');
     insert(text);
+    toggleEditSheet(false);
     toast('Beillesztve');
   };
+  const read = () => {
+    if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('nincs vágólap-támogatás');
+    return navigator.clipboard.readText();
+  };
+  // Ha a vágólap olvasása nincs engedélyezve, a rendszer saját beillesztő mezőjét ajánljuk fel (az mindig működik).
+  const fallback = () => {
+    toggleEditSheet(true, true);
+    toast('Tartsd hosszan az ujjad a mezőben, és válaszd a „Beillesztés” lehetőséget');
+  };
   try {
-    apply(await navigator.clipboard.readText());
+    apply(await read());
   } catch (e) {
     // A böngésző a vágólap olvasását valódi érintéshez köti; ha az ujj még a képernyőn van, a felengedésekor újra megpróbáljuk.
-    if (e && e.name === 'NotAllowedError' && touchCtl && touchCtl.active) {
+    if (touchCtl && touchCtl.active) {
       setTimeout(() => document.addEventListener('pointerup', async () => {
-        try { apply(await navigator.clipboard.readText()); } catch (err) { toast('A beillesztés nincs engedélyezve a böngészőben'); }
+        try { apply(await read()); } catch (err) { fallback(); }
       }, { once: true }), 0);
     } else {
-      toast('A beillesztés nincs engedélyezve a böngészőben');
+      fallback();
     }
   }
 }
 
-function toggleEditSheet(show) {
+function toggleEditSheet(show, withPasteBox = false) {
   $('#sheet-edit').hidden = !show;
+  const box = $('#paste-box');
+  box.hidden = !(show && withPasteBox);
+  box.value = '';
 }
 
 /* ---------- Szóajánló ---------- */
@@ -243,26 +257,45 @@ const overlays = { messages: $('#overlay-messages'), settings: $('#overlay-setti
 /* ---------- Telepítés felajánlása ---------- */
 
 let installEvent = null;
+let installBusy = false;
+const INSTALL_QUIET_MS = 3 * 24 * 3600 * 1000; // telepítés elfogadása után ennyi ideig nem ajánljuk fel újra
+
+async function alreadyInstalled() {
+  try {
+    if (navigator.getInstalledRelatedApps) return (await navigator.getInstalledRelatedApps()).length > 0;
+  } catch (e) { /* nem kritikus */ }
+  return false;
+}
 
 function setupInstall() {
   const standalone = ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener('beforeinstallprompt', async (e) => {
     e.preventDefault();
     installEvent = e;
-    if (!standalone && !sessionStorage.getItem('fst.installDismissed')) overlays.install.hidden = false;
+    const recent = Date.now() - Number(localStorage.getItem('fst.installAccepted') || 0) < INSTALL_QUIET_MS;
+    if (standalone || recent || sessionStorage.getItem('fst.installDismissed') || await alreadyInstalled()) return;
+    overlays.install.hidden = false;
   });
   window.addEventListener('appinstalled', () => {
     installEvent = null;
+    localStorage.setItem('fst.installAccepted', String(Date.now()));
     overlays.install.hidden = true;
     toast('Telepítve! Mostantól a kezdőképernyőről indítható.');
   });
   // Ez a gomb szándékosan natív: a telepítési ablak csak valódi érintésre nyílik meg.
   $('#install-go').addEventListener('click', async () => {
-    if (!installEvent) return;
-    installEvent.prompt();
-    const { outcome } = await installEvent.userChoice;
-    if (outcome === 'accepted') overlays.install.hidden = true;
+    if (!installEvent || installBusy) return;
+    installBusy = true;
+    try {
+      installEvent.prompt();
+      const { outcome } = await installEvent.userChoice;
+      if (outcome === 'accepted') {
+        localStorage.setItem('fst.installAccepted', String(Date.now()));
+        overlays.install.hidden = true;
+      }
+    } catch (e) { /* a böngésző már elutasította */ }
     installEvent = null;
+    installBusy = false;
   });
   $('#install-later').addEventListener('click', () => {
     sessionStorage.setItem('fst.installDismissed', '1');
@@ -533,7 +566,10 @@ function renderSettings() {
     const r = make('div', 'srow' + (row.wide ? ' wide' : ''));
     if (row.type === 'note') {
       r.classList.add('note');
-      r.textContent = `Friend Speak Type ${VERSION} · Hang: Piper (hu_HU anna, CC0/CC BY) · Szólista: FrequencyWords (CC BY-SA 4.0) · Offline: ${offlineReady ? 'kész ✓' : 'még nem kész'}`;
+      r.append(
+        make('div', 'note-main', `Verzió ${VERSION} · Gyorsítótár: ${cacheName || 'nincs'} · Futtatás: ${runMode()} · Offline: ${offlineReady ? 'kész ✓' : 'még nem kész'}`),
+        make('div', '', 'Hang: Piper (hu_HU anna, CC0/CC BY) · Szólista: FrequencyWords (CC BY-SA 4.0)'),
+      );
       body.append(r);
       continue;
     }
@@ -690,7 +726,7 @@ function handleActivate(el) {
     case 'editor-menu': toggleEditSheet(true); return 'nav';
     case 'sheet-close': toggleEditSheet(false); return 'nav';
     case 'restore': toggleEditSheet(false); restoreText(); return 'nav';
-    case 'paste': toggleEditSheet(false); pasteFromClipboard(); return 'nav';
+    case 'paste': pasteFromClipboard(); return 'nav';
     case 'open-messages': showMessages(); return 'nav';
     case 'close-overlay': closeTopOverlay(); return 'nav';
     case 'open-settings': openSettings(); return 'nav';
@@ -754,6 +790,14 @@ async function main() {
   ta.addEventListener('input', syncFromTextarea);
   ta.addEventListener('keyup', syncFromTextarea);
 
+  $('#paste-box').addEventListener('input', (e) => {
+    const text = e.target.value;
+    if (!text.trim()) return;
+    insert(text.replace(/\r\n?/g, '\n'));
+    toggleEditSheet(false);
+    toast('Beillesztve');
+  });
+
   $('#import-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
@@ -789,9 +833,17 @@ async function checkOffline() {
   try {
     const hit = await caches.match(MODEL_URL);
     const was = offlineReady;
+    const was2 = cacheName;
     offlineReady = !!hit;
-    if (was !== offlineReady && !overlays.settings.hidden) renderSettings();
+    cacheName = (await caches.keys())[0] || '';
+    if ((was !== offlineReady || was2 !== cacheName) && !overlays.settings.hidden) renderSettings();
   } catch (e) { /* nem kritikus */ }
+}
+
+/** Telepített alkalmazásként (önálló ablakban) vagy böngészőlapon fut-e. */
+function runMode() {
+  const installed = ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches) || navigator.standalone === true;
+  return installed ? 'telepített alkalmazás' : 'böngészőlap';
 }
 
 let wakeLock = null;
