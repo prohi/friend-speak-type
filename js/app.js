@@ -4,7 +4,7 @@ import { Predictor } from './predict.js';
 import { TouchController } from './touch.js';
 import { buildKeyboard, labelKeys, keyChar } from './keyboard.js';
 
-const VERSION = '0.3';
+const VERSION = '0.4';
 const MODEL_URL = 'voices/hu_HU-anna-medium.onnx';
 const CONFIG_URL = 'voices/hu_HU-anna-medium.onnx.json';
 const CARDS_PER_PAGE = 8;
@@ -821,12 +821,37 @@ async function main() {
   // Fejlesztés közben (localhost) a gyorsítótár elrejtené a módosításokat, ezért ott csak ?sw esetén fut.
   const dev = ['localhost', '127.0.0.1'].includes(location.hostname) && !location.search.includes('sw');
   if ('serviceWorker' in navigator && !dev) {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.error('SW hiba', e));
+    setupUpdates();
     checkOffline();
     setInterval(checkOffline, 15000);
+  } else {
+    checkOffline();
   }
 
   keepAwake();
+}
+
+/** Új verzió keresése induláskor és az alkalmazásba való visszatéréskor; megérkezése után biztonságos pillanatban újratölt. */
+function setupUpdates() {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloadPending = false;
+  const tryReload = () => {
+    const idle = !editor.text.trim() && Object.values(overlays).every((o) => o.hidden) && $('#sheet-edit').hidden;
+    if (idle && !speaker.job) location.reload();
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloadPending) return; // az első telepítéskor nem kell újratölteni
+    reloadPending = true;
+    toast('Új verzió érkezett');
+    tryReload();
+    setInterval(tryReload, 5000); // amint nincs beírt szöveg és nincs nyitott képernyő, betölti az újat
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reg.update().catch(() => {});
+    });
+  }).catch((e) => console.error('SW hiba', e));
 }
 
 async function checkOffline() {
@@ -835,7 +860,7 @@ async function checkOffline() {
     const was = offlineReady;
     const was2 = cacheName;
     offlineReady = !!hit;
-    cacheName = (await caches.keys())[0] || '';
+    cacheName = (await caches.keys()).find((k) => /^fst-v/.test(k)) || '';
     if ((was !== offlineReady || was2 !== cacheName) && !overlays.settings.hidden) renderSettings();
   } catch (e) { /* nem kritikus */ }
 }
