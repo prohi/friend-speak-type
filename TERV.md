@@ -223,6 +223,7 @@ Az összes adat (felhasználók, beállítások, mentett üzenetek, tanult szava
 - [x] Betűfelolvasás gépelés közben (előre legenerált betűhangok), hangmagasság és sebesség
 - [x] Szóajánló: gyakorisági lista (30 000 szó), ékezetfüggetlen keresés, szópárok, tanulás a használatból
 - [x] Mentett üzenetek, Gyakori és Előzmény fül; kimond, betölt, ment, töröl (megerősítéssel)
+- [x] A szövegmező hosszú nyomására felugró menü: **Beillesztés** (vágólapról) és **Visszaállítás** (a legutóbb törölt vagy lecserélt szöveg; ismételve a két változat között vált)
 - [x] Beállítások (hang, szöveg, érintés, egyéb), kontrasztos téma, diszlexiabarát betű, nagybetűs megjelenítés
 - [x] PIN-zár (opcionális), gyári visszaállítás, tanult adatok törlése, adatok mentése és betöltése fájlból
 - [x] Offline működés (Service Worker), telepíthető webalkalmazás (manifest, ikonok); kipróbálva leállított szerverrel is

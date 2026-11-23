@@ -11,6 +11,7 @@
  */
 
 const TARGET = '.t';
+const LONG_MS = 700; // a hosszú nyomás ideje azoknál az elemeknél, amelyek csak hosszú nyomásra reagálnak (data-long)
 
 export class TouchController {
   /**
@@ -68,6 +69,7 @@ export class TouchController {
     const mode = a.mode;
     this._clear();
     if (!hover) return;
+    if (hover.dataset.long) return; // az ilyen elem csak hosszú nyomásra aktiválódik
     if (mode === 'release') this._fire(hover);
     else if (mode === 'normal' && this._same(hover, down)) this._fire(hover);
   }
@@ -90,12 +92,12 @@ export class TouchController {
     if (!a.lockUntilLift) a.armed = true;
     if (!el) return;
     el.classList.add('hover');
-    if (a.mode === 'hold' && a.armed) this._startDwell(el);
+    if (a.armed && (a.mode === 'hold' || el.dataset.long)) this._startDwell(el);
   }
 
   _startDwell(el) {
     const a = this.active;
-    const ms = this.opts.getSettings().holdMs;
+    const ms = a.mode === 'hold' ? this.opts.getSettings().holdMs : LONG_MS;
     el.style.setProperty('--dwell', ms + 'ms');
     el.classList.add('dwelling');
     a.timer = setTimeout(() => {

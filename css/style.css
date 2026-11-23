@@ -171,6 +171,17 @@ body.contrast .foot-btn.on { background: #ffff00; color: #000; }
 body.contrast .sbtn { border: 0.4vh solid var(--key-edge); box-shadow: none; }
 body.contrast .sbtn.state-on { background: #ffff00; color: #000; }
 
+/* Szövegmező menü */
+#editor-wrap.hover { background: rgba(255, 213, 74, 0.35) !important; color: inherit !important; }
+.sheet { position: fixed; inset: 0; z-index: 15; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); }
+.sheet-panel { position: absolute; top: 29.5vh; left: 12vw; right: 12vw; display: flex; flex-direction: column; gap: 1.6vh; padding: 1.6vh; background: var(--paper); border: 0.4vh solid var(--line); border-radius: 2vh; box-shadow: 0 1vh 4vh rgba(0, 0, 0, 0.4); }
+.sheet-btn { height: 13vh; font-size: 4.6vh; font-weight: 700; background: var(--bar); color: var(--bar-ink); border-radius: 1.4vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.sheet-btn.secondary { height: 10vh; background: var(--key); color: var(--key-ink); box-shadow: 0 0.35vh 0 var(--key-edge); }
+body.contrast .sheet-btn { border: 0.4vh solid var(--line); }
+body.contrast .sheet-btn.secondary { box-shadow: none; }
+.sheet-btn.hover { background: var(--hover) !important; color: var(--hover-ink) !important; }
+
 /* Telepítés felajánlása */
 #overlay-install { z-index: 40; }
 .install-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vh; padding: 4vh 8vw; text-align: center; }

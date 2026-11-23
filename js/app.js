@@ -26,6 +26,7 @@ let suggestions = [];
 let seedPhrases = [];
 let piperStarted = false;
 let offlineReady = false;
+let touchCtl = null;
 
 /* ---------- Beállítások alkalmazása ---------- */
 
@@ -114,17 +115,44 @@ function moveCaret(d) {
 }
 
 function clearEditor() {
-  if (!editor.text) {
-    if (editor.undo) {
-      setText(editor.undo);
-      editor.undo = '';
-      toast('Visszaállítva');
-    }
-    return;
-  }
+  if (!editor.text) return restoreText();
   editor.undo = editor.text;
   setText('');
   toast('Törölve – a ✕ újabb érintése visszaállítja');
+}
+
+/** Visszaállítja az utoljára törölt vagy lecserélt szöveget; ismételve a két változat között vált. */
+function restoreText() {
+  if (!editor.undo) return toast('Nincs mit visszaállítani');
+  const current = editor.text;
+  setText(editor.undo);
+  editor.undo = current;
+  toast('Szöveg visszaállítva');
+}
+
+async function pasteFromClipboard() {
+  const apply = (raw) => {
+    const text = raw.replace(/\r\n?/g, '\n');
+    if (!text.trim()) return toast('A vágólap üres');
+    insert(text);
+    toast('Beillesztve');
+  };
+  try {
+    apply(await navigator.clipboard.readText());
+  } catch (e) {
+    // A böngésző a vágólap olvasását valódi érintéshez köti; ha az ujj még a képernyőn van, a felengedésekor újra megpróbáljuk.
+    if (e && e.name === 'NotAllowedError' && touchCtl && touchCtl.active) {
+      setTimeout(() => document.addEventListener('pointerup', async () => {
+        try { apply(await navigator.clipboard.readText()); } catch (err) { toast('A beillesztés nincs engedélyezve a böngészőben'); }
+      }, { once: true }), 0);
+    } else {
+      toast('A beillesztés nincs engedélyezve a böngészőben');
+    }
+  }
+}
+
+function toggleEditSheet(show) {
+  $('#sheet-edit').hidden = !show;
 }
 
 /* ---------- Szóajánló ---------- */
@@ -334,6 +362,7 @@ function cardAction(index) {
   if (mode === 'say') {
     speakStored(item.text);
   } else if (mode === 'load') {
+    if (editor.text) editor.undo = editor.text;
     setText(item.text);
     overlays.messages.hidden = true;
     return 'nav';
@@ -658,6 +687,10 @@ function handleActivate(el) {
       return;
     case 'speak': return speakEditor();
     case 'clear': return clearEditor();
+    case 'editor-menu': toggleEditSheet(true); return 'nav';
+    case 'sheet-close': toggleEditSheet(false); return 'nav';
+    case 'restore': toggleEditSheet(false); restoreText(); return 'nav';
+    case 'paste': toggleEditSheet(false); pasteFromClipboard(); return 'nav';
     case 'open-messages': showMessages(); return 'nav';
     case 'close-overlay': closeTopOverlay(); return 'nav';
     case 'open-settings': openSettings(); return 'nav';
@@ -697,7 +730,7 @@ async function main() {
   store.load(seedPhrases);
 
   buildKeyboard($('#keyboard'), layout);
-  new TouchController(document.body, { getSettings: () => store.settings, onActivate: handleActivate, marker: $('#touch-marker') });
+  touchCtl = new TouchController(document.body, { getSettings: () => store.settings, onActivate: handleActivate, marker: $('#touch-marker') });
 
   speaker.onStatus = (status, detail) => {
     const box = $('#status');

@@ -25,7 +25,7 @@
       <button class="t io-btn" data-act="clear" data-slot="clear" aria-label="Törlés">
         <svg viewBox="0 0 24 24" class="ico"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       </button>
-      <div id="editor-wrap">
+      <div id="editor-wrap" class="t" data-act="editor-menu" data-long="1" data-slot="editor">
         <div id="editor" class="empty"></div>
         <textarea id="editor-ta" data-native hidden spellcheck="false" autocomplete="off" autocapitalize="sentences"></textarea>
         <div id="placeholder">Írj ide…</div>
@@ -70,6 +70,16 @@
     </div>
     <div id="pin-dots" class="pin-dots"></div>
     <div id="pin-pad" class="pin-pad"></div>
+  </div>
+
+  <!-- Szövegmező menü (hosszú nyomásra) -->
+  <div id="sheet-edit" class="sheet" hidden>
+    <div class="sheet-backdrop"></div>
+    <div class="sheet-panel">
+      <button class="t sheet-btn" data-act="paste" data-slot="sh-paste">📋 BEILLESZTÉS</button>
+      <button class="t sheet-btn" data-act="restore" data-slot="sh-restore">↶ VISSZAÁLLÍTÁS</button>
+      <button class="t sheet-btn secondary" data-act="sheet-close" data-slot="sh-close">✕ Mégse</button>
+    </div>
   </div>
 
   <!-- Telepítés felajánlása (csak böngészőből indítva, ha a böngésző támogatja) -->
