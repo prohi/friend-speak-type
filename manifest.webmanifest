@@ -5,9 +5,7 @@
   "lang": "hu",
   "start_url": "./",
   "scope": "./",
-  "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone"],
-  "orientation": "landscape",
+  "display": "standalone",
   "background_color": "#24506b",
   "theme_color": "#24506b",
   "icons": [
