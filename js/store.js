@@ -4,6 +4,7 @@ export const DEFAULTS = {
   voice: 'piper',          // 'piper' | 'system'
   pitch: 1.0,              // 0.7 – 1.4
   speed: 1.0,              // 0.5 – 2.0
+  volume: 1.5,             // 0.5 – 3.0 (szoftveres erősítés, a rendszer hangerejétől függetlenül)
   letterSpeech: false,
   keyboard: 'custom',      // 'custom' | 'system'
   uppercase: false,

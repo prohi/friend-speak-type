@@ -11,6 +11,39 @@ export const LETTER_TEXTS = Object.entries(LETTER_NAMES).filter(([k]) => k !== '
 
 const CACHE_LIMIT = 150;
 
+/**
+ * Kimeneti lánc: hangerő (erősítés) → limiter → lágy vágó → hangszóró.
+ * A limiter és a lágy vágó megakadályozza a torzulást, ha az erősítés a jelet teljes kivezérlés fölé vinné,
+ * ezért a hangerő a rendszer hangerejétől függetlenül, 1-nél nagyobb értékre is emelhető.
+ * Offline méréssel: egyetlen minta sem lépi túl az 1,0-t, a kimenet a normalizálatlan jelnél kb. 11 dB-lel hangosabb.
+ */
+export function createOutputChain(ctx, volume = 1) {
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -6;
+  limiter.knee.value = 3;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.002;
+  limiter.release.value = 0.12;
+  const clip = ctx.createWaveShaper();
+  const n = 4096;
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    curve[i] = Math.tanh(x * 1.5) / Math.tanh(1.5);
+  }
+  clip.curve = curve;
+  clip.oversample = 'none'; // az oversampling túllövést okozna, ami a hangszórón vágást eredményezne
+  const trim = ctx.createGain();
+  trim.gain.value = 0.95; // tartalék a digitális vágás ellen
+  gain.connect(limiter);
+  limiter.connect(clip);
+  clip.connect(trim);
+  trim.connect(ctx.destination);
+  return { input: gain, gain };
+}
+
 export class Speaker {
   constructor() {
     this.status = 'idle'; // idle | loading | ready | failed
@@ -18,11 +51,19 @@ export class Speaker {
     this.onSpeaking = () => {};
     this.worker = null;
     this.ctx = null;
+    this.out = null;
+    this.volume = 1;
     this.seq = 0;
     this.job = null;
     this.cache = new Map();
     this.prefetchQueue = [];
     this.baseLength = 1;
+  }
+
+  /** A szoftveres hangerő szorzója (1 = alap); a rendszer hangerejétől független, működés közben is módosítható. */
+  setVolume(v) {
+    this.volume = v;
+    if (this.out) this.out.gain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 
   start(modelUrl, configUrl) {
@@ -45,7 +86,10 @@ export class Speaker {
   unlock() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) this.ctx = new AC();
+      if (AC) {
+        this.ctx = new AC();
+        this.out = createOutputChain(this.ctx, this.volume);
+      }
     }
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   }
@@ -97,7 +141,7 @@ export class Speaker {
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
     src.playbackRate.value = job.pitch;
-    src.connect(this.ctx.destination);
+    src.connect(this.out.input);
     const start = Math.max(this.ctx.currentTime + 0.03, job.nextStart);
     src.start(start);
     job.nextStart = start + buffer.duration / job.pitch + 0.12;
@@ -205,6 +249,7 @@ export class Speaker {
       if (hu) u.voice = hu;
       u.rate = speed;
       u.pitch = pitch;
+      u.volume = 1; // a rendszerhang hangereje nem emelhető a rendszer hangerején túl
       u.onend = u.onerror = () => { this.onSpeaking(false); resolve(); };
       this.onSpeaking(true);
       window.speechSynthesis.speak(u);

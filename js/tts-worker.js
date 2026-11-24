@@ -42,6 +42,20 @@ async function synthesize(text, lengthScale) {
   return result.output.data;
 }
 
+const NORMALIZE_PEAK = 0.95; // a modell kimenete halk (csúcs ~0,4), ezért teljes kivezérlésre emeljük
+const NORMALIZE_MAX_GAIN = 8;
+
+function normalize(samples) {
+  let peak = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const a = Math.abs(samples[i]);
+    if (a > peak) peak = a;
+  }
+  if (peak < 0.005) return; // csend: nem erősítjük a zajt
+  const gain = Math.min(NORMALIZE_PEAK / peak, NORMALIZE_MAX_GAIN);
+  for (let i = 0; i < samples.length; i++) samples[i] *= gain;
+}
+
 function splitSentences(text) {
   return text
     .split(/(?<=[.!?…])\s+|\n+/u)
@@ -65,6 +79,7 @@ self.onmessage = async (e) => {
         if (m.id <= cancelledUpTo) break;
         if (samples) {
           const copy = new Float32Array(samples);
+          normalize(copy);
           self.postMessage({ type: 'audio', id: m.id, index: i, samples: copy, sampleRate: config.audio.sample_rate }, [copy.buffer]);
         }
         await new Promise((r) => setTimeout(r, 0)); // hogy a megszakító üzenet beérjen

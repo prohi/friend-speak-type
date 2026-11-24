@@ -4,7 +4,7 @@ import { Predictor } from './predict.js';
 import { TouchController } from './touch.js';
 import { buildKeyboard, labelKeys, keyChar } from './keyboard.js';
 
-const VERSION = '0.5';
+const VERSION = '0.6';
 const MODEL_URL = 'voices/hu_HU-anna-medium.onnx';
 const CONFIG_URL = 'voices/hu_HU-anna-medium.onnx.json';
 const CARDS_PER_PAGE = 8;
@@ -50,6 +50,7 @@ function applySettings() {
   $('#editor-ta').hidden = !sys;
   $('#suggest').hidden = !s.suggestions;
   labelKeys($('#keyboard'), { shift, upper: s.uppercase });
+  speaker.setVolume(s.volume);
   if (s.voice === 'piper' && !piperStarted) startPiper();
   renderEditor();
   renderSuggestions();
@@ -500,6 +501,7 @@ const SETTINGS_TABS = [
       { type: 'choice', key: 'voice', label: 'Felolvasó hang' },
       { type: 'stepper', key: 'pitch', label: 'Hangmagasság', min: 0.7, max: 1.4, step: 0.1, fmt: (v) => v.toFixed(1).replace('.', ',') },
       { type: 'stepper', key: 'speed', label: 'Beszédsebesség', min: 0.5, max: 2.0, step: 0.1, fmt: (v) => v.toFixed(1).replace('.', ',') },
+      { type: 'stepper', key: 'volume', label: 'Hangerő', sub: 'független a rendszer hangerejétől; a természetes hangra hat', min: 0.5, max: 3.0, step: 0.25, fmt: (v) => Math.round(v * 100) + '%' },
       { type: 'toggle', key: 'letterSpeech', label: 'Betűk felolvasása gépelés közben' },
       { type: 'action', id: 'test-voice', label: 'Hangpróba', text: '🔊 Próbamondat' },
     ],
@@ -620,6 +622,10 @@ function changeSetting(key, op) {
   if (key === 'pitch' || key === 'speed') {
     speaker.speak('Ez egy hangpróba.', voiceOpts());
     prefetchCommon();
+  }
+  if (key === 'volume') {
+    speaker.setVolume(s.volume);
+    speaker.speak('Ez egy hangpróba.', voiceOpts());
   }
   if (key === 'letterSpeech' && s.letterSpeech) prefetchCommon();
   if (key === 'touchMode') toast(CHOICES.touchMode.find((o) => o[0] === s.touchMode)[1]);

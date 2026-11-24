@@ -159,7 +159,7 @@ body.contrast .foot-btn.on { background: #ffff00; color: #000; }
 /* Beállítások */
 .settings-body { flex: 1; display: grid; grid-auto-rows: 1fr; gap: 1.2vh; padding: 1.4vh 1.2vw; min-height: 0; }
 .srow { display: flex; align-items: stretch; gap: 1vw; min-height: 0; }
-.slabel { flex: 1; display: flex; align-items: center; font-size: 3.8vh; padding: 0 1vw; line-height: 1.1; }
+.slabel { flex: 1; display: flex; flex-direction: column; justify-content: center; font-size: 3.8vh; padding: 0 1vw; line-height: 1.1; }
 .slabel small { display: block; font-size: 2.4vh; opacity: 0.65; }
 .sctl { flex: 0 0 52%; display: flex; gap: 0.8vw; min-height: 0; }
 .sbtn { flex: 1; font-size: 4vh; font-weight: 600; background: var(--key); color: var(--key-ink); border-radius: 1.2vh; box-shadow: 0 0.35vh 0 var(--key-edge); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 0.6vw; text-align: center; line-height: 1.1; }

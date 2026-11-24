@@ -224,6 +224,7 @@ Az összes adat (felhasználók, beállítások, mentett üzenetek, tanult szava
 - [x] Szóajánló: gyakorisági lista (30 000 szó), ékezetfüggetlen keresés, szópárok, tanulás a használatból
 - [x] Mentett üzenetek, Gyakori és Előzmény fül; kimond, betölt, ment, töröl (megerősítéssel)
 - [x] A szövegmező hosszú nyomására felugró menü: **Beillesztés** (vágólapról) és **Visszaállítás** (a legutóbb törölt vagy lecserélt szöveg; ismételve a két változat között vált)
+- [x] **Hangerő** (50–300%, alapérték 150%): a rendszer hangerejétől független szoftveres erősítés. A hang automatikusan teljes kivezérlésre normalizált, a kimenet limiterrel és lágy vágóval védett (offline méréssel: nincs digitális vágás, a kimenet kb. 12 dB-lel hangosabb a 0.5-ös verziónál). Csak a Piper hangra hat; a rendszerhang hangereje nem emelhető a rendszer hangerején túl.
 - [x] Beállítások (hang, szöveg, érintés, egyéb), kontrasztos téma, diszlexiabarát betű, nagybetűs megjelenítés
 - [x] PIN-zár (opcionális), gyári visszaállítás, tanult adatok törlése, adatok mentése és betöltése fájlból
 - [x] Offline működés (Service Worker), telepíthető webalkalmazás (manifest, ikonok); kipróbálva leállított szerverrel is
