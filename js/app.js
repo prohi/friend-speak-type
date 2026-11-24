@@ -4,7 +4,7 @@ import { Predictor } from './predict.js';
 import { TouchController } from './touch.js';
 import { buildKeyboard, labelKeys, keyChar } from './keyboard.js';
 
-const VERSION = '0.7';
+const VERSION = '0.8';
 const MODEL_URL = 'voices/hu_HU-anna-medium.onnx';
 const CONFIG_URL = 'voices/hu_HU-anna-medium.onnx.json';
 const CARDS_PER_PAGE = 8;
@@ -28,6 +28,10 @@ let piperStarted = false;
 let offlineReady = false;
 let cacheName = '';
 let touchCtl = null;
+let reader = false; // teljes képernyős olvasás
+let goalX = null;   // fel/le nyíl: a kurzor kívánt vízszintes helye
+let placeIdx = null; // a szövegmező menüjének megnyitásakor megnyomott szövegpozíció
+const LONG_TEXT = 120; // ennél hosszabb beillesztett/betöltött szöveg magától teljes képernyős olvasásra vált
 
 /* ---------- Beállítások alkalmazása ---------- */
 
@@ -49,6 +53,7 @@ function applySettings() {
   $('#editor').hidden = sys;
   $('#editor-ta').hidden = !sys;
   $('#suggest').hidden = !s.suggestions;
+  if (sys && reader) exitReader();
   labelKeys($('#keyboard'), { shift, upper: s.uppercase });
   speaker.setVolume(s.volume);
   if (s.voice === 'piper' && !piperStarted) startPiper();
@@ -76,15 +81,129 @@ function renderEditor() {
   if (store.settings.keyboard === 'system') {
     const ta = $('#editor-ta');
     if (ta.value !== editor.text) ta.value = editor.text;
+    updateEditorChrome();
     return;
   }
   view.textContent = '';
   const caret = make('span', 'caret');
   view.append(document.createTextNode(editor.text.slice(0, editor.caret)), caret, document.createTextNode(editor.text.slice(editor.caret)));
   caret.scrollIntoView({ block: 'nearest' });
+  updateEditorChrome();
+}
+
+const caretAtEnd = () => editor.caret >= editor.text.length || store.settings.keyboard === 'system';
+
+/** A ✕ gomb lefelé nyíllá válik, ha a kurzor nem a szöveg végén áll; a gördítősáv is itt frissül. */
+function updateEditorChrome() {
+  const clearBtn = document.querySelector('[data-act="clear"]');
+  const toEnd = !caretAtEnd();
+  clearBtn.classList.toggle('to-end', toEnd);
+  clearBtn.setAttribute('aria-label', toEnd ? 'A szöveg végére' : 'Törlés');
+  updateScrollbar();
+}
+
+function updateScrollbar() {
+  const view = $('#editor');
+  const thumb = $('#scrollthumb');
+  const overflow = view.scrollHeight > view.clientHeight + 1;
+  thumb.hidden = !overflow;
+  if (!overflow) return;
+  const track = $('#scrollbar').clientHeight;
+  const h = Math.max(track * (view.clientHeight / view.scrollHeight), track * 0.08);
+  const max = view.scrollHeight - view.clientHeight;
+  thumb.style.height = h + 'px';
+  thumb.style.top = (view.scrollTop / max) * (track - h) + 'px';
+}
+
+/** Húzásos gördítés: alapból úgy, mintha a gördítősávot fognánk (a teljes szöveg kis húzással bejárható). */
+function scrollEditor(dy) {
+  const view = $('#editor');
+  const k = store.settings.scrollMode === 'follow' ? -1 : view.scrollHeight / Math.max(1, view.clientHeight);
+  view.scrollTop += dy * k;
+}
+
+/** A képernyő egy pontjához tartozó szövegpozíció (karakterindex), vagy null. */
+function indexAtPoint(x, y) {
+  const view = $('#editor');
+  let node = null;
+  let off = 0;
+  if (document.caretPositionFromPoint) {
+    const p = document.caretPositionFromPoint(x, y);
+    if (p) { node = p.offsetNode; off = p.offset; }
+  } else if (document.caretRangeFromPoint) {
+    const r = document.caretRangeFromPoint(x, y);
+    if (r) { node = r.startContainer; off = r.startOffset; }
+  }
+  if (!node || !view.contains(node)) return null;
+  const [before, , after] = view.childNodes; // a megjelenített szöveg: [kurzor előtt, kurzor, kurzor után]
+  if (node === before) return Math.min(off, editor.caret);
+  if (node === after) return Math.min(editor.caret + off, editor.text.length);
+  if (node === view) return off <= 0 ? 0 : off >= 3 ? editor.text.length : editor.caret;
+  return editor.caret;
+}
+
+function setCaret(i) {
+  editor.caret = Math.max(0, Math.min(editor.text.length, i));
+  goalX = null;
+  renderEditor();
+  refreshSuggestions();
+}
+
+/** Egy sorral feljebb (-1) vagy lejjebb (+1) viszi a kurzort, a korábbi vízszintes helyét megtartva. */
+function moveLine(dir) {
+  const view = $('#editor');
+  const mark = view.querySelector('.caret');
+  if (!mark) return;
+  const lineH = parseFloat(getComputedStyle(view).lineHeight) || mark.getBoundingClientRect().height * 1.2;
+  if (goalX === null) goalX = mark.getBoundingClientRect().left;
+  const vr = view.getBoundingClientRect();
+  const targetY = () => mark.getBoundingClientRect().top + mark.getBoundingClientRect().height / 2 + dir * lineH;
+  // A szomszédos sor előbb láthatóvá kell váljon, különben nem található meg a pontja.
+  let y = targetY();
+  if (y < vr.top + 2 || y > vr.bottom - 2) {
+    view.scrollTop += dir * lineH;
+    y = targetY();
+  }
+  let idx = indexAtPoint(goalX, y);
+  if (idx === null) idx = dir < 0 ? 0 : editor.text.length;
+  const keep = goalX;
+  editor.caret = idx;
+  renderEditor();
+  goalX = keep;
+}
+
+function enterReader(fromStart = false) {
+  if (store.settings.keyboard === 'system') return toast('A teljes képernyős olvasás a saját billentyűzettel érhető el');
+  reader = true;
+  document.body.classList.add('reader');
+  $('#readnav').hidden = false;
+  $('#readbar').hidden = false;
+  renderEditor();
+  if (fromStart) $('#editor').scrollTop = 0;
+  updateScrollbar();
+}
+
+function exitReader() {
+  reader = false;
+  document.body.classList.remove('reader');
+  $('#readnav').hidden = true;
+  $('#readbar').hidden = true;
+  $('#sheet-end').hidden = true;
+  renderEditor();
+  refreshSuggestions();
+}
+
+function requestExitReader() {
+  if (caretAtEnd()) exitReader();
+  else $('#sheet-end').hidden = false;
+}
+
+function maybeReader() {
+  if (!reader && editor.text.length > LONG_TEXT) enterReader(true);
 }
 
 function changed() {
+  goalX = null;
   renderEditor();
   refreshSuggestions();
 }
@@ -111,12 +230,14 @@ function backspace() {
 }
 
 function moveCaret(d) {
+  goalX = null;
   editor.caret = Math.max(0, Math.min(editor.text.length, editor.caret + d));
   renderEditor();
   refreshSuggestions();
 }
 
 function clearEditor() {
+  if (!caretAtEnd()) return setCaret(editor.text.length); // előbb a szöveg végére ugrik
   if (!editor.text) return restoreText();
   editor.undo = editor.text;
   setText('');
@@ -132,13 +253,17 @@ function restoreText() {
   toast('Szöveg visszaállítva');
 }
 
+function insertPasted(raw) {
+  insert(raw.replace(/\r\n?/g, '\n'));
+  toggleEditSheet(false);
+  toast('Beillesztve');
+  maybeReader();
+}
+
 async function pasteFromClipboard() {
   const apply = (raw) => {
-    const text = raw.replace(/\r\n?/g, '\n');
-    if (!text.trim()) return toast('A vágólap üres');
-    insert(text);
-    toggleEditSheet(false);
-    toast('Beillesztve');
+    if (!raw.trim()) return toast('A vágólap üres');
+    insertPasted(raw);
   };
   const read = () => {
     if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('nincs vágólap-támogatás');
@@ -399,6 +524,7 @@ function cardAction(index) {
     if (editor.text) editor.undo = editor.text;
     setText(item.text);
     overlays.messages.hidden = true;
+    maybeReader();
     return 'nav';
   } else if (mode === 'save') {
     toast(store.addMessage(item.text) ? 'Elmentve a mentett üzenetek közé' : 'Már mentve van');
@@ -490,6 +616,7 @@ const CHOICES = {
   keyboard: [['custom', 'Saját, nagy gombos'], ['system', 'Rendszer billentyűzet']],
   speakSide: [['right', 'Jobb oldalon'], ['left', 'Bal oldalon']],
   touchMode: [['normal', 'Normál érintés'], ['release', 'Aktiválás felengedéskor'], ['hold', 'Aktiválás hosszú lenyomásra']],
+  scrollMode: [['bar', 'Mint a gördítősáv'], ['follow', 'A szöveg követi az ujjat']],
 };
 
 const secs = (ms) => (ms / 1000).toFixed(1).replace('.', ',') + ' mp';
@@ -523,6 +650,7 @@ const SETTINGS_TABS = [
       { type: 'choice', key: 'touchMode', label: 'Érintési mód' },
       { type: 'stepper', key: 'holdMs', label: 'Hosszú lenyomás ideje', min: 200, max: 3000, step: 100, fmt: secs },
       { type: 'stepper', key: 'repeatMs', label: 'Ismétlésszűrés', sub: 'ugyanaz a gomb ennyi ideig nem aktiválható újra', min: 0, max: 2000, step: 100, fmt: secs },
+      { type: 'choice', key: 'scrollMode', label: 'Szöveg gördítése húzással', sub: 'a hosszú szöveg ablakán fel-le húzva' },
       { type: 'choice', key: 'speakSide', label: 'Kimondó gomb helye' },
     ],
   },
@@ -697,9 +825,9 @@ function runAction(id) {
 
 /* ---------- Gombok kezelése ---------- */
 
-function handleActivate(el) {
+function handleActivate(el, long = false, pt = null) {
   const d = el.dataset;
-  switch (d.act) {
+  switch (long ? d.longact : d.act) {
     case 'key': {
       const ch = keyChar(el, shift);
       insert(ch);
@@ -719,6 +847,14 @@ function handleActivate(el) {
     case 'space': return insert(' ');
     case 'left': return moveCaret(-1);
     case 'right': return moveCaret(1);
+    case 'nav-start': return setCaret(0);
+    case 'nav-end': return setCaret(editor.text.length);
+    case 'nav-up': return moveLine(-1);
+    case 'nav-down': return moveLine(1);
+    case 'reader-open': enterReader(); return 'nav';
+    case 'reader-close': requestExitReader(); return 'nav';
+    case 'end-yes': setCaret(editor.text.length); exitReader(); return 'nav';
+    case 'end-no': exitReader(); return 'nav';
     case 'layout':
       layout = layout === 'abc' ? 'sym' : 'abc';
       buildKeyboard($('#keyboard'), layout);
@@ -730,7 +866,15 @@ function handleActivate(el) {
       return;
     case 'speak': return speakEditor();
     case 'clear': return clearEditor();
-    case 'editor-menu': toggleEditSheet(true); return 'nav';
+    case 'editor-menu':
+      placeIdx = pt ? indexAtPoint(pt.x, pt.y) : null;
+      document.querySelector('[data-act="place-caret"]').hidden = placeIdx === null || !editor.text;
+      toggleEditSheet(true);
+      return 'nav';
+    case 'place-caret':
+      toggleEditSheet(false);
+      if (placeIdx !== null) setCaret(placeIdx);
+      return 'nav';
     case 'sheet-close': toggleEditSheet(false); return 'nav';
     case 'restore': toggleEditSheet(false); restoreText(); return 'nav';
     case 'paste': pasteFromClipboard(); return 'nav';
@@ -773,7 +917,10 @@ async function main() {
   store.load(seedPhrases);
 
   buildKeyboard($('#keyboard'), layout);
-  touchCtl = new TouchController(document.body, { getSettings: () => store.settings, onActivate: handleActivate, marker: $('#touch-marker') });
+  touchCtl = new TouchController(document.body, { getSettings: () => store.settings, onActivate: handleActivate, onScroll: (el, dy) => scrollEditor(dy), marker: $('#touch-marker') });
+  $('#editor').addEventListener('scroll', updateScrollbar);
+  $('#editor-wrap').addEventListener('wheel', (e) => { $('#editor').scrollTop += e.deltaY; }, { passive: true });
+  window.addEventListener('resize', updateScrollbar);
 
   // Fizikai billentyűzetről (Ctrl+V) is be lehessen illeszteni, ha nincs nyitva natív mező.
   document.addEventListener('paste', (e) => {
@@ -781,9 +928,7 @@ async function main() {
     const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
     if (!text.trim()) return;
     e.preventDefault();
-    insert(text.replace(/\r\n?/g, '\n'));
-    toggleEditSheet(false);
-    toast('Beillesztve');
+    insertPasted(text);
   });
 
   speaker.onStatus = (status, detail) => {
@@ -811,9 +956,7 @@ async function main() {
   $('#paste-box')?.addEventListener('input', (e) => {
     const text = e.target.value;
     if (!text.trim()) return;
-    insert(text.replace(/\r\n?/g, '\n'));
-    toggleEditSheet(false);
-    toast('Beillesztve');
+    insertPasted(text);
   });
 
   $('#import-file').addEventListener('change', async (e) => {
@@ -854,7 +997,7 @@ function setupUpdates() {
   const hadController = !!navigator.serviceWorker.controller;
   let reloadPending = false;
   const tryReload = () => {
-    const idle = !editor.text.trim() && Object.values(overlays).every((o) => o.hidden) && $('#sheet-edit').hidden;
+    const idle = !editor.text.trim() && Object.values(overlays).every((o) => o.hidden) && $('#sheet-edit').hidden && !reader;
     if (idle && !speaker.job) location.reload();
   };
   navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -1,7 +1,7 @@
 /* Offline működés: minden fájlt a készülék gyorsítótárából szolgál ki.
  * A kód (SMALL) verziózott gyorsítótárban van, a nagy, ritkán változó fájlok (BIG) külön, állandó gyorsítótárban,
  * így egy kódfrissítés nem tölti le újra a ~90 MB-nyi hangmodellt. A CACHE nevét minden kiadásnál növelni kell. */
-const CACHE = 'fst-v9';
+const CACHE = 'fst-v10';
 const ASSETS = 'fst-assets-1';
 
 const SMALL = [

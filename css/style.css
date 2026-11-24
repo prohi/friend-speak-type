@@ -173,11 +173,36 @@ body.contrast .foot-btn.on { background: #ffff00; color: #000; }
 body.contrast .sbtn { border: 0.4vh solid var(--key-edge); box-shadow: none; }
 body.contrast .sbtn.state-on { background: #ffff00; color: #000; }
 
+/* Teljes képernyős olvasás */
+#readnav { display: flex; height: 13vh; gap: 0.8vw; padding: 1vh 0.8vw; background: var(--paper); border-top: 0.3vh solid var(--line); }
+.rn-btn { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; background: var(--key); color: var(--key-ink); border-radius: 1.3vh; box-shadow: 0 0.35vh 0 var(--key-edge); overflow: hidden; }
+.rn-btn .ico { width: 6.5vh; height: 6.5vh; }
+body.contrast .rn-btn { border: 0.4vh solid var(--key-edge); box-shadow: none; }
+#readbar { display: flex; height: 9.5vh; background: var(--bar); color: var(--bar-ink); }
+#readbar .bar-btn.center { margin: 0 0 0.7vh; border-radius: 0 0 1vh 1vh; flex: 0 0 24%; margin-left: auto; margin-right: auto; }
+body.reader #suggest, body.reader #keyboard { display: none; }
+body.reader #inputrow { flex: 1; height: auto; min-height: 0; }
+body.reader #editor { font-size: 7vh; padding-right: 4.4vh; }
+body.reader .io-btn { align-self: stretch; }
+#scrollbar { display: none; position: absolute; top: 0.8vh; bottom: 0.8vh; right: 0.6vh; width: 2vh; border-radius: 1vh; background: rgba(36, 80, 107, 0.15); pointer-events: none; }
+body.reader #scrollbar { display: block; }
+#scrollthumb { position: absolute; left: 0; right: 0; top: 0; height: 100%; border-radius: 1vh; background: var(--bar); }
+body.contrast #scrollbar { background: rgba(255, 255, 0, 0.25); }
+body.contrast #scrollthumb { background: #ffff00; }
+.io-btn .ico-end { display: none; }
+.io-btn.to-end .ico-x { display: none; }
+.io-btn.to-end .ico-end { display: block; }
+
 /* Szövegmező menü */
 #editor-wrap.hover { background: rgba(255, 213, 74, 0.35) !important; color: inherit !important; }
 .sheet { position: fixed; inset: 0; z-index: 15; }
 .sheet-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); }
-.sheet-panel { position: absolute; top: 29.5vh; left: 12vw; right: 12vw; display: flex; flex-direction: column; gap: 1.6vh; padding: 1.6vh; background: var(--paper); border: 0.4vh solid var(--line); border-radius: 2vh; box-shadow: 0 1vh 4vh rgba(0, 0, 0, 0.4); }
+.sheet-panel { position: absolute; top: 20vh; left: 12vw; right: 12vw; display: flex; flex-direction: column; gap: 1.6vh; padding: 1.6vh; background: var(--paper); border: 0.4vh solid var(--line); border-radius: 2vh; box-shadow: 0 1vh 4vh rgba(0, 0, 0, 0.4); }
+#sheet-end .sheet-panel { top: 28vh; }
+.sheet-q { font-size: 4.6vh; font-weight: 600; text-align: center; line-height: 1.25; padding: 1vh 1vw; }
+.sheet-row { display: flex; gap: 1.6vh; }
+.sheet-row .sheet-btn { flex: 1; height: 16vh; }
+.sheet-row .sheet-btn.secondary { height: 16vh; }
 .sheet-btn { height: 13vh; font-size: 4.6vh; font-weight: 700; background: var(--bar); color: var(--bar-ink); border-radius: 1.4vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .sheet-btn.secondary { height: 10vh; background: var(--key); color: var(--key-ink); box-shadow: 0 0.35vh 0 var(--key-edge); }
 body.contrast .sheet-btn { border: 0.4vh solid var(--line); }

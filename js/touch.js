@@ -12,11 +12,12 @@
 
 const TARGET = '.t';
 const LONG_MS = 700; // a hosszú nyomás ideje azoknál az elemeknél, amelyek csak hosszú nyomásra reagálnak (data-long)
+const DRAG_VH = 3; // ennyi mozgás (a képernyő magasságának %-ában) után a nyomás húzásnak számít a gördíthető területen
 
 export class TouchController {
   /**
    * @param {HTMLElement} root
-   * @param {{getSettings: () => object, onActivate: (el: HTMLElement) => (void|'nav'), marker: HTMLElement}} opts
+   * @param {{getSettings: () => object, onActivate: (el: HTMLElement, long: boolean, point: ({x: number, y: number}|null)) => (void|'nav'), onScroll?: (el: HTMLElement, dy: number) => void, marker: HTMLElement}} opts
    */
   constructor(root, opts) {
     this.root = root;
@@ -32,7 +33,7 @@ export class TouchController {
       // Egérnél a jobb klikk ugyanazt csinálja, mint a hosszú nyomás.
       if (e.target.closest && e.target.closest('[data-native]')) return;
       const t = this._targetAt(e.clientX, e.clientY);
-      if (t && t.dataset.long) this._fire(t);
+      if (t && (t.dataset.long || t.dataset.longact)) this._fire(t, !!t.dataset.longact, { x: e.clientX, y: e.clientY });
     });
   }
 
@@ -55,7 +56,10 @@ export class TouchController {
     try { this.root.setPointerCapture(e.pointerId); } catch (err) { /* nem kritikus */ }
     const mode = this.opts.getSettings().touchMode;
     const target = this._targetAt(e.clientX, e.clientY);
-    this.active = { id: e.pointerId, mode, down: target, hover: null, timer: null, armed: true, lockUntilLift: false };
+    this.active = {
+      id: e.pointerId, mode, down: target, hover: null, timer: null, armed: true, lockUntilLift: false,
+      x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, since: performance.now(), dragging: false,
+    };
     this._marker(e.clientX, e.clientY, mode !== 'normal');
     this._setHover(target);
   }
@@ -64,6 +68,24 @@ export class TouchController {
     const a = this.active;
     if (!a || e.pointerId !== a.id) return;
     this._marker(e.clientX, e.clientY, a.mode !== 'normal');
+    let dy = e.clientY - a.y;
+    a.x = e.clientX;
+    a.y = e.clientY;
+    // A gördíthető területen (data-scroll) a húzás gördít, és nem aktivál semmit.
+    if (a.down && a.down.dataset.scroll && this.opts.onScroll) {
+      if (!a.dragging && Math.hypot(a.x - a.startX, a.y - a.startY) > window.innerHeight * DRAG_VH / 100) {
+        a.dragging = true;
+        a.armed = false;
+        a.lockUntilLift = true;
+        clearTimeout(a.timer);
+        if (a.hover) a.hover.classList.remove('hover', 'dwelling');
+        dy = a.y - a.startY;
+      }
+      if (a.dragging) {
+        this.opts.onScroll(a.down, dy);
+        return;
+      }
+    }
     this._setHover(this._targetAt(e.clientX, e.clientY));
   }
 
@@ -73,9 +95,20 @@ export class TouchController {
     const hover = a.hover;
     const down = a.down;
     const mode = a.mode;
+    const { armed, since, dragging } = a;
     this._clear();
-    if (!hover) return;
+    if (!hover || dragging) return;
     if (hover.dataset.long) return; // az ilyen elem csak hosszú nyomásra aktiválódik
+    if (hover.dataset.longact) {
+      // Rövid és hosszú művelettel is bíró elem: a hosszú már lefutott, vagy a rövid a felengedéskor aktiválódik.
+      if (!armed) return;
+      if (mode === 'hold') {
+        if (performance.now() - since >= this.opts.getSettings().holdMs) this._fire(hover);
+      } else if (mode === 'release' || this._same(hover, down)) {
+        this._fire(hover);
+      }
+      return;
+    }
     if (mode === 'release') this._fire(hover);
     else if (mode === 'normal' && this._same(hover, down)) this._fire(hover);
   }
@@ -95,26 +128,31 @@ export class TouchController {
     if (a.hover) a.hover.classList.remove('hover', 'dwelling');
     clearTimeout(a.timer);
     a.hover = el;
+    a.since = performance.now();
     if (!a.lockUntilLift) a.armed = true;
     if (!el) return;
     el.classList.add('hover');
-    if (a.armed && (a.mode === 'hold' || el.dataset.long)) this._startDwell(el);
+    if (a.armed && (a.mode === 'hold' || el.dataset.long || el.dataset.longact)) this._startDwell(el);
   }
 
   _startDwell(el) {
     const a = this.active;
-    const ms = a.mode === 'hold' ? this.opts.getSettings().holdMs : LONG_MS;
+    const holdMs = this.opts.getSettings().holdMs;
+    const dual = !!el.dataset.longact;
+    let ms = a.mode === 'hold' ? holdMs : LONG_MS;
+    if (el.dataset.long) ms = LONG_MS;
+    else if (dual && a.mode === 'hold') ms = Math.max(LONG_MS, holdMs + 500); // a rövid művelet holdMs-nél már megvan
     el.style.setProperty('--dwell', ms + 'ms');
     el.classList.add('dwelling');
     a.timer = setTimeout(() => {
       if (!this.active || this.active !== a || a.hover !== el) return;
       el.classList.remove('dwelling');
       a.armed = false;
-      this._fire(el);
+      this._fire(el, dual, { x: a.x, y: a.y });
     }, ms);
   }
 
-  _fire(el) {
+  _fire(el, long = false, point = null) {
     const now = performance.now();
     const gap = this.opts.getSettings().repeatMs;
     if (this.last && this._same(this.last.el, el) && now - this.last.t < gap) {
@@ -124,7 +162,7 @@ export class TouchController {
     this.last = { el, t: now };
     this._flash(el, 'ok');
     if (navigator.vibrate) navigator.vibrate(25);
-    const result = this.opts.onActivate(el);
+    const result = this.opts.onActivate(el, long, point);
     if (result === 'nav' && this.active) {
       this.active.armed = false;
       this.active.lockUntilLift = true;

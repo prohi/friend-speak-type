@@ -14,6 +14,7 @@ export const DEFAULTS = {
   touchMode: 'release',    // 'normal' | 'release' | 'hold'
   holdMs: 800,             // 200 – 3000
   repeatMs: 300,           // 0 – 2000
+  scrollMode: 'bar',       // 'bar' (mint a gördítősáv fogása) | 'follow' (a szöveg követi az ujjat)
   suggestions: true,
   suggestionCount: 4,      // 3 – 5
   lockEnabled: false,
