@@ -4,7 +4,7 @@ import { Predictor } from './predict.js';
 import { TouchController } from './touch.js';
 import { buildKeyboard, labelKeys, keyChar } from './keyboard.js';
 
-const VERSION = '0.6';
+const VERSION = '0.7';
 const MODEL_URL = 'voices/hu_HU-anna-medium.onnx';
 const CONFIG_URL = 'voices/hu_HU-anna-medium.onnx.json';
 const CARDS_PER_PAGE = 8;
@@ -774,6 +774,17 @@ async function main() {
 
   buildKeyboard($('#keyboard'), layout);
   touchCtl = new TouchController(document.body, { getSettings: () => store.settings, onActivate: handleActivate, marker: $('#touch-marker') });
+
+  // Fizikai billentyűzetről (Ctrl+V) is be lehessen illeszteni, ha nincs nyitva natív mező.
+  document.addEventListener('paste', (e) => {
+    if (e.target.closest && e.target.closest('[data-native]')) return;
+    const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
+    if (!text.trim()) return;
+    e.preventDefault();
+    insert(text.replace(/\r\n?/g, '\n'));
+    toggleEditSheet(false);
+    toast('Beillesztve');
+  });
 
   speaker.onStatus = (status, detail) => {
     const box = $('#status');

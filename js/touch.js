@@ -27,7 +27,13 @@ export class TouchController {
     root.addEventListener('pointermove', (e) => this._move(e));
     root.addEventListener('pointerup', (e) => this._up(e));
     root.addEventListener('pointercancel', (e) => this._cancel(e));
-    root.addEventListener('contextmenu', (e) => e.preventDefault());
+    root.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      // Egérnél a jobb klikk ugyanazt csinálja, mint a hosszú nyomás.
+      if (e.target.closest && e.target.closest('[data-native]')) return;
+      const t = this._targetAt(e.clientX, e.clientY);
+      if (t && t.dataset.long) this._fire(t);
+    });
   }
 
   _targetAt(x, y) {
